@@ -1,6 +1,7 @@
 from time import sleep
 import pandas as pd
 from selenium import webdriver
+import selenium
 import re
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
@@ -10,6 +11,12 @@ import math
 from tqdm import tqdm
 import os
 import sys
+import warnings
+import numpy as np
+
+warnings.simplefilter(action='ignore')
+
+translationTable = str.maketrans("ğĞıİöÖüÜşŞçÇ", "gGiIoOuUsScC")
 
 class getList:
 
@@ -59,7 +66,7 @@ class getList:
         options.add_argument("no-default-browser-check")
         options.add_argument("no-first-run")
         options.add_argument('log-level=3')
-        options.add_argument('--ignore-ssl-errors')
+        options.add_argument('--ignore-ssl-errors') # kapatılsın options
 
         self.drivers = {'chrome':webdriver.Chrome}
 
@@ -72,14 +79,12 @@ class getList:
         browser.get(self.link)
 
         sleep(3)
-
+        
         select = Select(browser.find_element(By.XPATH, ("//*[@id='tablo_length']/label/select")))
 
         select.select_by_value('100')
 
-        sleep(3)
-
-        webtable_df1 = pd.read_html(browser.find_element(By.XPATH, ("//*[@id='tablo']")).get_attribute('outerHTML'))[0]
+        sleep(1)
         
         totalbku = browser.find_element(By.XPATH, ("//*[@id='tablo_info']")).get_attribute('outerHTML')
         
@@ -105,207 +110,258 @@ class getList:
         
         totalpage = math.ceil(totalbku/100)
         
-        button = browser.find_element(By.XPATH, "/html/body/div/div[2]/div[1]/div[3]/div/table/tbody/tr[1]/td[8]/a")
+        webtables_df = pd.read_html(browser.find_element(By.XPATH, ("//*[@id='tablo']")).get_attribute('outerHTML'))[0]
         
-        browser.execute_script('arguments[0].click()', button)
-        
-        ayrinti = pd.read_html(browser.find_element(By.XPATH, ("/html/body/div/div[2]/div[2]/table")).get_attribute('outerHTML'))[0]
-        
-        ayrinti_df1 = ayrinti.transpose() # , index = ["Formulasyonu", "Aktif Madde", "Ruhsat Numarası", "Ruhsat Tarihi", "Ruhsat Grubu", "Raf Ömrü Süre", "Geçerlilik Süresi", "Ruhsat Sahibi Firma", "Adresi", "İthalatçı Firma / Üretici Firma", "Adresi"]
-        
-        ayrinti_df1.columns = ayrinti_df1.iloc[0]
-        
-        ayrinti_df1.drop(labels=0, axis=0, inplace=True, index=None)
-        
-        ayrinti_df1.reset_index(inplace=True)
-        
-        ayrinti_df1.drop(["index"], axis = 1, inplace = True)
-        
-        try:
+        newcolumns = pd.Index(["Bitki Koruma Ürünü", "Ruhsat Durumu", "Aktif Madde", "Ruhsat Sahibi Firma", "Ruhsat Tarihi", "Ruhsat No", "Formulasyon", "Detaylar", "Ruhsat Grubu", "Raf Ömrü Süre", "Geçerlilik Süresi", "Ruhsat Sahibi Firma Adı", "Ruhsat Sahibi Firma Adresi", "İthalatçı Firma / Üretici Firma Adı", "İthalatçı Firma / Üretici Firma Adresi", "Üretici Firma (Yabancı) Adı", "Üretici Firma (Yabancı) Adresi", "Fabrika Adı", "Fabrika Adresi", "Bitki Adı", "Zararlı Organizma", "Tavsiye Durumu", "Dozu", "Son İlaçlama ile Hasat Arası Süre", "Tavsiye Tarihi", "Uyarı", "Yerli mi?", "Konum", "Hastalık Latince İsmi"])
                 
-            ayrinti_df1.drop(['Fabrika', 'Fabrika Adresi'], axis=1, inplace=True)
+        table_df = pd.DataFrame(data=np.empty((totalbku*15, 29), dtype=str),columns=newcolumns)
+        
+        s = 0
+        
+        sehirler=["Adana", "Adıyaman", "Afyon", "Ağrı", "Amasya", "Ankara", "Antalya", "Artvin", "Aydın", "Balıkesir", "Bilecik", "Bingöl", "Bitlis", "Bolu", "Burdur", "Bursa", "Çanakkale", "Çankırı", "Çorum", "Denizli", "Diyarbakır", "Edirne", "Elazığ", "Erzincan", "Erzurum", "Eskişehir", "Gaziantep", "Giresun", "Gümüşhane", "Hakkari", "Hatay", "Isparta", "İçel (Mersin)", "İstanbul", "İzmir", "Kars", "Kastamonu", "Kayseri", "Kırklareli", "Kırşehir", "Kocaeli", "Konya", "Kütahya", "Malatya", "Manisa", "Kahramanmaraş", "Mardin", "Muğla", "Muş", "Nevşehir", "Niğde", "Ordu", "Rize", "Sakarya", "Samsun", "Siirt", "Sinop", "Sivas", "Tekirdağ", "Tokat", "Trabzon", "Tunceli", "Şanlıurfa", "Uşak", "Van", "Yozgat", "Zonguldak", "Aksaray", "Bayburt", "Karaman", "Kırıkkale", "Batman", "Şırnak", "Bartın", "Ardahan", "Iğdır", "Yalova", "Karabük", "Kilis", "Osmaniye", "Düzce"]
+        
+        sehir = sehirler.copy()
+        
+        for y in range(len(sehir)):
             
-            ayrinti_df1.rename(columns={'Üretici Firma (Yabancı)': 'İthalatçı Firma / Üretici Firma'}, inplace=True)
+            sehir[y] = sehirler[y].lower() # totalpage
         
-        except:
+        for j in tqdm (range(0, totalpage), desc="Done", ascii=False, ncols= 120, initial = 0, unit ="pages"): # 1, initial = 2, dynamic_ncols=True mininterval=5
+                        
+            webtables_dfadd = pd.read_html(browser.find_element(By.XPATH, ("//*[@id='tablo']")).get_attribute('outerHTML'))[0]
             
-            pass
-        
-        ayrinti_df = ayrinti_df1
-        
-        browser.back()
-        
-        for i in range(2, 101):
+            webtables_df = webtables_dfadd.copy()
+            
+            for i in range(1, 101): # 101
+                
+                for k in range(len(webtables_df.columns)):
+                    
+                    table_df.iloc[(i+s-1)+100*j][table_df.columns[k]] = webtables_df.iloc[(i-1)][table_df.columns[k]]
 
-            button = browser.find_element(By.XPATH, "/html/body/div/div[2]/div[1]/div[3]/div/table/tbody/tr[{0}]/td[8]/a".format(i))
-        
-            browser.execute_script('arguments[0].click()', button)
-            
-            ayrinti = pd.read_html(browser.find_element(By.XPATH, ("/html/body/div/div[2]/div[2]/table")).get_attribute('outerHTML'))[0]
-            
-            ayrinti_df2 = ayrinti.transpose() # , index = ["Formulasyonu", "Aktif Madde", "Ruhsat Numarası", "Ruhsat Tarihi", "Ruhsat Grubu", "Raf Ömrü Süre", "Geçerlilik Süresi", "Ruhsat Sahibi Firma", "Adresi", "İthalatçı Firma / Üretici Firma", "Adresi"]
-            
-            ayrinti_df2.columns = ayrinti_df2.iloc[0]
-            
-            ayrinti_df2.drop(labels=0, axis=0, inplace=True, index=None)
-            
-            ayrinti_df2.reset_index(inplace=True)
-            
-            ayrinti_df2.drop(["index"], axis = 1, inplace = True)
-            
-            try:
+                    bitkiAdi = table_df.iloc[(i+s-1)+100*j][table_df.columns[0]]
+                    
+                    konum = table_df.iloc[(i+s-1)+100*j][table_df.columns[3]]
+                    
+                    for z in range(len(sehir)):
+                        
+                        matchsehirler = re.search(sehir[z].translate(translationTable), konum.lower().translate(translationTable))
+                        
+                        if matchsehirler:
+                            
+                            konum = sehirler[z]
+                            
+                        else:
+                            
+                            matchsehirler = re.search(sehir[z].upper().translate(translationTable), konum.upper().translate(translationTable))
+                            
+                            if matchsehirler:
+                            
+                                konum = sehirler[z]
+                            
+                        table_df.iloc[(i+s-1)+100*j]["Konum"] = konum
                 
-                ayrinti_df2.drop(['Fabrika', 'Fabrika Adresi'], axis=1, inplace=True)
+                    matchbitkiAdi = re.search(r"İMAL", bitkiAdi)
+                    
+                    if matchbitkiAdi:
+                        
+                        table_df.iloc[(i+s-1)+100*j]["Yerli mi?"] = "Evet"
+                        
+                    else:
+                        table_df.iloc[(i+s-1)+100*j]["Yerli mi?"] = "Hayır"
+                    
+                button = browser.find_element(By.XPATH, "/html/body/div/div[2]/div[1]/div[3]/div/table/tbody/tr[{0}]/td[8]/a".format(i))
                 
-                ayrinti_df2.rename(columns={'Üretici Firma (Yabancı)': 'İthalatçı Firma / Üretici Firma'}, inplace=True)
-            
-            except:
-                
-                pass
-            
-            # sleep(1)
-            
-            browser.back()
-            
-            ayrinti_df = [ayrinti_df, ayrinti_df2]
-            
-            ayrinti_df = pd.concat(ayrinti_df, ignore_index=True)
-            
-        # print("Done 1/{0}".format(totalpage))
-        
-        button = browser.find_element(By.XPATH, ("/html/body/div/div[2]/div[1]/div[4]/div/div/ul/li[9]/a"))
-        
-        browser.execute_script('arguments[0].click()', button)
-            
-        webtable_df2 = pd.read_html(browser.find_element(By.XPATH, ("//*[@id='tablo']")).get_attribute('outerHTML'))[0]
-        
-        button = browser.find_element(By.XPATH, "/html/body/div/div[2]/div[1]/div[3]/div/table/tbody/tr[1]/td[8]/a")
-        
-        browser.execute_script('arguments[0].click()', button)
-        
-        ayrinti = pd.read_html(browser.find_element(By.XPATH, ("/html/body/div/div[2]/div[2]/table")).get_attribute('outerHTML'))[0]
-        
-        ayrinti_df3 = ayrinti.transpose() # , index = ["Formulasyonu", "Aktif Madde", "Ruhsat Numarası", "Ruhsat Tarihi", "Ruhsat Grubu", "Raf Ömrü Süre", "Geçerlilik Süresi", "Ruhsat Sahibi Firma", "Adresi", "İthalatçı Firma / Üretici Firma", "Adresi"]
-        
-        ayrinti_df3.columns = ayrinti_df3.iloc[0]
-        
-        ayrinti_df3.drop(labels=0, axis=0, inplace=True, index=None)
-        
-        ayrinti_df3.reset_index(inplace=True)
-        
-        ayrinti_df3.drop(["index"], axis = 1, inplace = True)
-        
-        try:
-                
-            ayrinti_df3.drop(['Fabrika', 'Fabrika Adresi'], axis=1, inplace=True)
-            
-            ayrinti_df3.rename(columns={'Üretici Firma (Yabancı)': 'İthalatçı Firma / Üretici Firma'}, inplace=True)
-        
-        except:
-            
-            pass
-
-        ayrinti_df = [ayrinti_df, ayrinti_df3]
-        
-        ayrinti_df = pd.concat(ayrinti_df, ignore_index=True)
-        
-        browser.back()
-        
-        for k in range(2, 101):
-
-            button = browser.find_element(By.XPATH, "/html/body/div/div[2]/div[1]/div[3]/div/table/tbody/tr[{0}]/td[8]/a".format(k))
-        
-            browser.execute_script('arguments[0].click()', button)
-            
-            ayrinti = pd.read_html(browser.find_element(By.XPATH, ("/html/body/div/div[2]/div[2]/table")).get_attribute('outerHTML'))[0]
-            
-            ayrinti_df4 = ayrinti.transpose() # , index = ["Formulasyonu", "Aktif Madde", "Ruhsat Numarası", "Ruhsat Tarihi", "Ruhsat Grubu", "Raf Ömrü Süre", "Geçerlilik Süresi", "Ruhsat Sahibi Firma", "Adresi", "İthalatçı Firma / Üretici Firma", "Adresi"]
-            
-            ayrinti_df4.columns = ayrinti_df4.iloc[0]
-            
-            ayrinti_df4.drop(labels=0, axis=0, inplace=True, index=None)
-            
-            try:
-            
-                ayrinti_df4.drop(['Fabrika', 'Fabrika Adresi'], axis=1, inplace=True)
-                
-                ayrinti_df4.rename(columns={'Üretici Firma (Yabancı)': 'İthalatçı Firma / Üretici Firma'}, inplace=True)
-            
-            except:
-                
-                pass
-            
-            ayrinti_df4.reset_index(inplace=True)
-            
-            ayrinti_df4.drop(["index"], axis = 1, inplace = True)
-            
-            # sleep(1)
-            
-            browser.back()
-            
-            ayrinti_df = [ayrinti_df, ayrinti_df4]
-    
-            ayrinti_df = pd.concat(ayrinti_df, ignore_index=True)
-        
-        # print("Done 2/{0}".format(totalpage))
-        
-        for j in tqdm (range(1, totalpage), desc="Done", ascii=False, ncols= 120, initial = 2, unit ="pages"): # dynamic_ncols=True
-            
-            # if j == 0 or j == 1:
-                
-            #     pass
-            
-            # else:
-            
-            button = browser.find_element(By.XPATH, ("/html/body/div/div[2]/div[1]/div[4]/div/div/ul/li[9]/a"))
-        
-            browser.execute_script('arguments[0].click()', button)
-            
-            add_df = pd.read_html(browser.find_element(By.XPATH, ("//*[@id='tablo']")).get_attribute('outerHTML'))[0]
-            
-            webtable_df2 = [webtable_df2, add_df]
-            
-            webtable_df2 = pd.concat(webtable_df2, ignore_index=True)
-            
-            for l in range(1, 101):
-
-                button = browser.find_element(By.XPATH, "/html/body/div/div[2]/div[1]/div[3]/div/table/tbody/tr[{0}]/td[8]/a".format(l))
-            
                 browser.execute_script('arguments[0].click()', button)
-                
+
                 ayrinti = pd.read_html(browser.find_element(By.XPATH, ("/html/body/div/div[2]/div[2]/table")).get_attribute('outerHTML'))[0]
+
+                ayrinti_df = ayrinti.transpose()
                 
-                ayrinti_df5 = ayrinti.transpose() # , index = ["Formulasyonu", "Aktif Madde", "Ruhsat Numarası", "Ruhsat Tarihi", "Ruhsat Grubu", "Raf Ömrü Süre", "Geçerlilik Süresi", "Ruhsat Sahibi Firma", "Adresi", "İthalatçı Firma / Üretici Firma", "Adresi"]
+                ayrinti_df.columns = ayrinti_df.iloc[0]
                 
-                ayrinti_df5.columns = ayrinti_df5.iloc[0]
+                ayrinti_df.drop(labels=0, axis=0, inplace=True)
                 
-                ayrinti_df5.drop(labels=0, axis=0, inplace=True, index=None)
+                ayrinti_df.reset_index(inplace=True)
                 
-                try:
+                ayrinti_df.columns.values[0] = "Formulasyon"
                 
-                    ayrinti_df5.drop(['Fabrika', 'Fabrika Adresi'], axis=1, inplace=True)
+                ayrinti_df.columns.values[2] = "Ruhsat No"
+                
+                if len(ayrinti_df.columns) == 12:
                     
-                    ayrinti_df5.rename(columns={'Üretici Firma (Yabancı)': 'İthalatçı Firma / Üretici Firma'}, inplace=True)
+                    if ayrinti_df.columns.values[10] == "İthalatçı Firma / Üretici Firma":
                 
-                except:
+                        ayrinti_df.columns.values[10] = "İthalatçı Firma / Üretici Firma Adı"
                     
-                    pass
+                        ayrinti_df.columns.values[11] = "İthalatçı Firma / Üretici Firma Adresi"
+                    
+                if len(ayrinti_df.columns) == 14:
+                    
+                    if ayrinti_df.columns.values[10] == "Üretici Firma (Yabancı)":
                 
-                ayrinti_df5.reset_index(inplace=True)
+                        ayrinti_df.columns.values[10] = "Üretici Firma (Yabancı) Adı"
+                    
+                        ayrinti_df.columns.values[11] = "Üretici Firma (Yabancı) Adresi"
+                        
+                        ayrinti_df.columns.values[12] = "Fabrika Adı"
                 
-                ayrinti_df5.drop(["index"], axis = 1, inplace = True)
+                ayrinti_df.rename(columns={'Ruhsat Sahibi Firma': 'Ruhsat Sahibi Firma Adı'}, inplace=True)
                 
-                # sleep(1)
+                ayrinti_df.columns.values[9] = "Ruhsat Sahibi Firma Adresi"
+                
+                for l in range(8, len(ayrinti_df.columns)+8):
+                
+                    try:
+                        
+                        table_df.iloc[(i+s-1)+100*j][table_df.columns[l]] = ayrinti_df.iloc[0][table_df.columns[l]]
+                    
+                    except:
+                        
+                        pass
+                                        
+                select = Select(browser.find_element(By.XPATH, ("/html/body/div/div[2]/div[3]/div[1]/div[2]/div/label/select")))
+
+                select.select_by_value('100')
+                
+                sleep(1)
+                
+                totalhastalik = browser.find_element(By.XPATH, ("/html/body/div/div[2]/div[3]/div[1]/div[1]/div")).get_attribute('outerHTML')
+                                
+                for h in range(len(totalhastalik)):
+                    
+                    if totalhastalik[h] == ">":
+                        
+                        totalhastalik = totalhastalik[h+1:]
+                        
+                        for t in range(len(totalhastalik)):
+                        
+                            if totalhastalik[t] == "k":
+                                
+                                totalhastalik = totalhastalik[:t-1]
+                                
+                                a = int(totalhastalik)
+                                
+                                break
+                            
+                            else: 
+                                
+                                pass
+                            
+                        break
+                            
+                    else:
+                        
+                        pass
+                
+                c = s
+                
+                for n in range(a-1):
+                    
+                    table_df.loc[i+c+100*j] = table_df.loc[i+c-1+100*j].copy()
+
+                    c += 1
+                    
+                o = int(a/100)
+                    
+                for m in range(a): # a-1
+                    
+                    if o == 2:
+                        
+                        button = browser.find_element(By.XPATH, ("/html/body/div/div[2]/div[3]/div[4]/div/div/ul/li[{0}]/a".format(o+3)))
+                        
+                        browser.execute_script('arguments[0].click()', button)
+                        
+                    if o == 1:
+                        
+                        button = browser.find_element(By.XPATH, ("/html/body/div/div[2]/div[3]/div[4]/div/div/ul/li[{0}]/a".format(o+3)))
+                        
+                        browser.execute_script('arguments[0].click()', button)
+                        
+                    try:
+                
+                        button = browser.find_element(By.XPATH, ("/html/body/div/div[2]/div[3]/div[3]/div/table/tbody/tr[{0}]/td[7]/a".format(m%100+1)))
+                    
+                        browser.execute_script('arguments[0].click()', button)
+                        
+                        uyaribilgisi = browser.find_element(By.XPATH, ("/html/body/div/div[2]/div[1]/dl/dd[9]/label"))
+                        
+                        table_df.iloc[(i+s-1)+100*j][table_df.columns[25]] = uyaribilgisi.text
+                        
+                        browser.back()
+                        
+                    except:
+                        
+                        pass
+                        
+                    for v in range(a):
+                        
+                        try:
+                        
+                            hastalikbilgisi = pd.read_html(browser.find_element(By.XPATH, ("/html/body/div/div[2]/div[3]/div[3]/div/table")).get_attribute('outerHTML'))[0]
+                            
+                            hastalikbilgisi = hastalikbilgisi.iloc[v]
+                        
+                            for b in range(19, len(hastalikbilgisi)+19):
+                            
+                                if b == 20:
+                                    
+                                    table_df.iloc[(i+s-1)+100*j][table_df.columns[b]] = hastalikbilgisi[table_df.columns[b]]
+                                    
+                                    hastalikadi = hastalikbilgisi["Zararlı Organizma"]
+                                    
+                                    hastalikadi = str(hastalikadi)
+                                    
+                                    if hastalikadi == "" or hastalikadi == "nan" or hastalikadi == None:
+                                        
+                                        table_df.iloc[(i+s-1)+100*j]["Hastalık Latince İsmi"] = ""
+                                    
+                                    else:
+                                        
+                                        for h in range(len(hastalikadi)):
+                                    
+                                            if hastalikadi[h] == "(":
+                                                
+                                                latinceBitkiAdı = hastalikadi[h+1:len(hastalikadi)-1]
+                                                
+                                                if hastalikadi[-1] == ")":
+                                                
+                                                    latinceBitkiAdı = latinceBitkiAdı[:-1]
+                                                
+                                                table_df.iloc[(i+s-1)+100*j]["Hastalık Latince İsmi"] = latinceBitkiAdı
+                                
+                                elif b == 25:
+                                    
+                                    pass
+                                
+                                else:
+                                    
+                                    table_df.iloc[(i+s-1)+100*j][table_df.columns[b]] = hastalikbilgisi[table_df.columns[b]]
+                        
+                        except:
+                            
+                            pass
+                        
+                    if m < a-1:
+                        
+                        s += 1
                 
                 browser.back()
                 
-                ayrinti_df = [ayrinti_df, ayrinti_df5]
-        
-                ayrinti_df = pd.concat(ayrinti_df, ignore_index=True)
-        
-        webtable_df3 = pd.read_html(browser.find_element(By.XPATH, ("//*[@id='tablo']")).get_attribute('outerHTML'))[0]
+            button = browser.find_element(By.XPATH, ("/html/body/div/div[2]/div[1]/div[4]/div/div/ul/li[9]/a"))
+                
+            browser.execute_script('arguments[0].click()', button)
+            
+            table_df.to_excel("BitkiKorumaUrunListesi.xlsx")
+            
+        j = j + 1
         
         totalbku = browser.find_element(By.XPATH, ("//*[@id='tablo_info']")).get_attribute('outerHTML')
+        
+        ara1 = re.compile(r'\d.\d\d\d')
+        
+        ara2 = re.compile(r'\d\d.\d\d\d')
+        
+        ara3 = re.compile(r'\d\d\d.\d\d\d')
         
         if ara1.search(str(totalbku)):
         
@@ -318,89 +374,233 @@ class getList:
         if ara3.search(str(totalbku)):
         
             totalbku = ara3.search(str(totalbku))
-            
+        
         totalbku = int(str(totalbku.group()).replace('.', ''))
         
-        lastpageBKU = totalbku%100
+        webtables_df = pd.read_html(browser.find_element(By.XPATH, ("//*[@id='tablo']")).get_attribute('outerHTML'))[0]
         
-        for m in range(1, lastpageBKU-1):
-            
-            if m ==  lastpageBKU-10:
+        for p in range(1, totalbku+1): # totalbku
                 
-                totalbku = browser.find_element(By.XPATH, ("//*[@id='tablo_info']")).get_attribute('outerHTML')
-        
-                if ara1.search(str(totalbku)):
-                
-                    totalbku = ara1.search(str(totalbku))
+            for d in range(len(webtables_df.columns)):
                     
-                if ara2.search(str(totalbku)):
-                
-                    totalbku = ara2.search(str(totalbku))
-                    
-                if ara3.search(str(totalbku)):
-                
-                    totalbku = ara3.search(str(totalbku))
-                    
-                totalbku = int(str(totalbku.group()).replace('.', ''))
-                
-                if m > totalbku:
-                    
-                    break
+                table_df.iloc[(i+s+p-1)+100*j][table_df.columns[d]] = webtables_df.iloc[(p-1)][table_df.columns[d]]
 
-            button = browser.find_element(By.XPATH, "/html/body/div/div[2]/div[1]/div[3]/div/table/tbody/tr[{0}]/td[8]/a".format(m))
-        
+                bitkiAdi = table_df.iloc[(i+s+p-1)+100*j][table_df.columns[0]]
+                
+                konum = table_df.iloc[(i+s+p-1)+100*j][table_df.columns[3]]
+                    
+                for z in range(len(sehir)):
+                        
+                    matchsehirler = re.search(sehir[z].translate(translationTable), konum.lower().translate(translationTable))
+                    
+                    if matchsehirler:
+                        
+                        konum = sehirler[z]
+                        
+                    else:
+                        
+                        matchsehirler = re.search(sehir[z].upper().translate(translationTable), konum.upper().translate(translationTable))
+                        
+                        if matchsehirler:
+                        
+                            konum = sehirler[z]
+                        
+                    table_df.iloc[(i+s+p-1)+100*j]["Konum"] = konum
+                        
+                matchbitkiAdi = re.search(r"İMAL", bitkiAdi)
+                    
+                if matchbitkiAdi:
+                    
+                    table_df.iloc[(i+s+p-1)+100*j]["Yerli mi?"] = "Evet"
+                    
+                else:
+                    
+                    table_df.iloc[(i+s+p-1)+100*j]["Yerli mi?"] = "Hayır"
+                    
+            button = browser.find_element(By.XPATH, "/html/body/div/div[2]/div[1]/div[3]/div/table/tbody/tr[{0}]/td[8]/a".format(p))
+            
             browser.execute_script('arguments[0].click()', button)
-            
+
             ayrinti = pd.read_html(browser.find_element(By.XPATH, ("/html/body/div/div[2]/div[2]/table")).get_attribute('outerHTML'))[0]
+
+            ayrinti_df = ayrinti.transpose()
             
-            ayrinti_df6 = ayrinti.transpose() # , index = ["Formulasyonu", "Aktif Madde", "Ruhsat Numarası", "Ruhsat Tarihi", "Ruhsat Grubu", "Raf Ömrü Süre", "Geçerlilik Süresi", "Ruhsat Sahibi Firma", "Adresi", "İthalatçı Firma / Üretici Firma", "Adresi"]
+            ayrinti_df.columns = ayrinti_df.iloc[0]
             
-            ayrinti_df6.columns = ayrinti_df6.iloc[0]
+            ayrinti_df.drop(labels=0, axis=0, inplace=True)
             
-            ayrinti_df6.drop(labels=0, axis=0, inplace=True, index=None)
+            ayrinti_df.reset_index(inplace=True)
             
-            ayrinti_df6.reset_index(inplace=True)
+            ayrinti_df.columns.values[0] = "Formulasyon"
             
-            ayrinti_df6.drop(["index"], axis = 1, inplace = True)
+            ayrinti_df.columns.values[2] = "Ruhsat No"
             
-            try:
+            if len(ayrinti_df.columns) == 12:
                 
-                ayrinti_df6.drop(['Fabrika', 'Fabrika Adresi'], axis=1, inplace=True)
+                if ayrinti_df.columns.values[10] == "İthalatçı Firma / Üretici Firma":
+            
+                    ayrinti_df.columns.values[10] = "İthalatçı Firma / Üretici Firma Adı"
                 
-                ayrinti_df6.rename(columns={'Üretici Firma (Yabancı)': 'İthalatçı Firma / Üretici Firma'}, inplace=True)
-            
-            except:
+                    ayrinti_df.columns.values[11] = "İthalatçı Firma / Üretici Firma Adresi"
                 
-                pass
+            if len(ayrinti_df.columns) == 14:
+                
+                if ayrinti_df.columns.values[10] == "Üretici Firma (Yabancı)":
             
-            ayrinti_df = [ayrinti_df, ayrinti_df6]
-        
-            ayrinti_df = pd.concat(ayrinti_df, ignore_index=True)
+                    ayrinti_df.columns.values[10] = "Üretici Firma (Yabancı) Adı"
+                
+                    ayrinti_df.columns.values[11] = "Üretici Firma (Yabancı) Adresi"
+                    
+                    ayrinti_df.columns.values[12] = "Fabrika Adı"
             
-            # sleep(1)
+            ayrinti_df.rename(columns={'Ruhsat Sahibi Firma': 'Ruhsat Sahibi Firma Adı'}, inplace=True)
             
+            ayrinti_df.columns.values[9] = "Ruhsat Sahibi Firma Adresi"
+            
+            for l in range(8, len(ayrinti_df.columns)+8):
+            
+                try:
+                    
+                    table_df.iloc[(i+s+p-1)+100*j][table_df.columns[l]] = ayrinti_df.iloc[0][table_df.columns[l]]
+                
+                except:
+                    
+                    pass
+                                    
+            select = Select(browser.find_element(By.XPATH, ("/html/body/div/div[2]/div[3]/div[1]/div[2]/div/label/select")))
+
+            select.select_by_value('100')
+            
+            sleep(1)
+                
+            totalhastalik = browser.find_element(By.XPATH, ("/html/body/div/div[2]/div[3]/div[1]/div[1]/div")).get_attribute('outerHTML')
+            
+            for h in range(len(totalhastalik)):
+                
+                if totalhastalik[h] == ">":
+                    
+                    totalhastalik = totalhastalik[h+1:]
+                    
+                    for t in range(len(totalhastalik)):
+                    
+                        if totalhastalik[t] == "k":
+                            
+                            totalhastalik = totalhastalik[:t-1]
+                            
+                            a = int(totalhastalik)
+                            
+                            break
+                        
+                        else: 
+                            
+                            pass
+                        
+                    break
+                        
+                else:
+                    
+                    pass
+            
+            c = s
+            
+            for n in range(a-1):
+                
+                table_df.loc[i+c+p+100*j] = table_df.loc[i+c+p-1+100*j].copy()
+
+                c += 1
+                
+            o = int(a/100)
+                
+            for m in range(a):
+                
+                if o == 2:
+                        
+                    button = browser.find_element(By.XPATH, ("/html/body/div/div[2]/div[3]/div[4]/div/div/ul/li[{0}]/a".format(o+3)))
+                    
+                    browser.execute_script('arguments[0].click()', button)
+                    
+                if o == 1:
+                    
+                    button = browser.find_element(By.XPATH, ("/html/body/div/div[2]/div[3]/div[4]/div/div/ul/li[{0}]/a".format(o+3)))
+                    
+                    browser.execute_script('arguments[0].click()', button)
+                
+                try:
+                
+                    button = browser.find_element(By.XPATH, ("/html/body/div/div[2]/div[3]/div[3]/div/table/tbody/tr[{0}]/td[7]/a".format(m%100+1)))
+                
+                    browser.execute_script('arguments[0].click()', button)
+                    
+                    uyaribilgisi = browser.find_element(By.XPATH, ("/html/body/div/div[2]/div[1]/dl/dd[9]/label"))
+                    
+                    table_df.iloc[(i+s+p-1)+100*j][table_df.columns[25]] = uyaribilgisi.text
+                    
+                    browser.back()
+                    
+                except:
+                    
+                    pass
+                        
+                for v in range(a):
+                    
+                    try:
+                    
+                        hastalikbilgisi = pd.read_html(browser.find_element(By.XPATH, ("/html/body/div/div[2]/div[3]/div[3]/div/table")).get_attribute('outerHTML'))[0]
+                        
+                        hastalikbilgisi = hastalikbilgisi.iloc[v]
+                    
+                        for b in range(19, len(hastalikbilgisi)+19):
+                        
+                            if b == 20:
+                                
+                                table_df.iloc[(i+s+p-1)+100*j][table_df.columns[b]] = hastalikbilgisi[table_df.columns[b]]
+                                
+                                hastalikadi = hastalikbilgisi["Zararlı Organizma"]
+                                
+                                hastalikadi = str(hastalikadi)
+                                
+                                if hastalikadi == "" or hastalikadi == "nan" or hastalikadi == None:
+                                    
+                                    table_df.iloc[(i+s+p-1)+100*j]["Hastalık Latince İsmi"] = ""
+                                
+                                else:
+                                    
+                                    for h in range(len(hastalikadi)):
+                                
+                                        if hastalikadi[h] == "(":
+                                            
+                                            latinceBitkiAdı = hastalikadi[h+1:len(hastalikadi)-1]
+                                            
+                                            if hastalikadi[-1] == ")":
+                                                
+                                                latinceBitkiAdı = latinceBitkiAdı[:-1]
+                                            
+                                            table_df.iloc[(i+s+p-1)+100*j]["Hastalık Latince İsmi"] = latinceBitkiAdı
+                            
+                            elif b == 25:
+                                    
+                                pass
+                            
+                            else:
+                                
+                                table_df.iloc[(i+s+p-1)+100*j][table_df.columns[b]] = hastalikbilgisi[table_df.columns[b]]
+                    
+                    except:
+                        
+                        pass
+                    
+                if m < a-1:
+                    
+                    s += 1
+    
             browser.back()
-        
-        webtable_df = [webtable_df1, webtable_df2, webtable_df3]
-        
-        webtable_df = pd.concat(webtable_df, ignore_index=True)
-        
-        webtable_df_all = [webtable_df, ayrinti_df]
-                
-        webtable_df_all = pd.concat(webtable_df_all, axis=1)
-        
-        webtable_df_all.to_excel("BitkiKorumaUrunListesi.xlsx")
-        
+            
+        browser.quit()
+            
+        table_df.to_excel("BitkiKorumaUrunListesi.xlsx") 
+
         print("Done {0}/{1} as %100 and data file is created.".format(totalpage, totalpage))
 
-        browser.quit()
-
 if __name__ == '__main__':
-    
-    # try:
         
     getList(driver='chrome', driver_path="chromedriver.exe")
-        
-    # except:
-        
-    #     os.execl(sys.executable, os.path.abspath(__file__), *sys.argv)
