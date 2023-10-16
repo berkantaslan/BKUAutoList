@@ -13,6 +13,9 @@ import os
 import sys
 import warnings
 import numpy as np
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
 
 warnings.simplefilter(action='ignore')
 
@@ -66,7 +69,7 @@ class getList:
         options.add_argument("no-default-browser-check")
         options.add_argument("no-first-run")
         options.add_argument('log-level=3')
-        options.add_argument('--ignore-ssl-errors') # kapatılsın options
+        options.add_argument('--ignore-ssl-errors')
 
         self.drivers = {'chrome':webdriver.Chrome}
 
@@ -74,11 +77,15 @@ class getList:
 
         browser = self.drivers[self.driver](service=driver_service, options=options)
 
+        browser.maximize_window()
+        
         browser.implicitly_wait(10)
 
         browser.get(self.link)
 
         sleep(3)
+        
+        WebDriverWait(browser, 20).until(EC.element_to_be_clickable((By.XPATH, "//*[@id='tablo_length']/label/select")))
         
         select = Select(browser.find_element(By.XPATH, ("//*[@id='tablo_length']/label/select")))
 
@@ -146,17 +153,33 @@ class getList:
                         
                         matchsehirler = re.search(sehir[z].translate(translationTable), konum.lower().translate(translationTable))
                         
+                        matchizmir = re.search("izmir", konum.lower().translate(translationTable))
+                        
+                        matchIZMIR = re.search("IZMIR", konum.upper().translate(translationTable))
+                        
                         if matchsehirler:
                             
                             konum = sehirler[z]
+                            
+                        elif matchizmir or matchIZMIR:
+                            
+                            konum = "İzmir"
                             
                         else:
                             
                             matchsehirler = re.search(sehir[z].upper().translate(translationTable), konum.upper().translate(translationTable))
                             
+                            matchizmir = re.search("İZMİR", konum.upper().translate(translationTable))
+                            
+                            matchIZMIR = re.search("IZMIR", konum.upper().translate(translationTable))
+                            
                             if matchsehirler:
                             
                                 konum = sehirler[z]
+                                
+                            elif matchizmir or matchIZMIR:
+                            
+                                konum = "İzmir"
                             
                         table_df.iloc[(i+s-1)+100*j]["Konum"] = konum
                 
@@ -168,13 +191,17 @@ class getList:
                         
                     else:
                         table_df.iloc[(i+s-1)+100*j]["Yerli mi?"] = "Hayır"
-                    
+                
+                WebDriverWait(browser, 20).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div/div[2]/div[1]/div[3]/div/table/tbody/tr[{0}]/td[8]/a".format(i))))
+                
                 button = browser.find_element(By.XPATH, "/html/body/div/div[2]/div[1]/div[3]/div/table/tbody/tr[{0}]/td[8]/a".format(i))
                 
                 browser.execute_script('arguments[0].click()', button)
-
+                    
+                WebDriverWait(browser, 20).until(EC.presence_of_element_located((By.XPATH, ("/html/body/div/div[2]/div[2]/table"))))
+                
                 ayrinti = pd.read_html(browser.find_element(By.XPATH, ("/html/body/div/div[2]/div[2]/table")).get_attribute('outerHTML'))[0]
-
+                
                 ayrinti_df = ayrinti.transpose()
                 
                 ayrinti_df.columns = ayrinti_df.iloc[0]
@@ -219,9 +246,23 @@ class getList:
                         
                         pass
                                         
-                select = Select(browser.find_element(By.XPATH, ("/html/body/div/div[2]/div[3]/div[1]/div[2]/div/label/select")))
+                try:
+                    
+                    WebDriverWait(browser, 20).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div/div[2]/div[3]/div[1]/div[2]/div/label/select")))
+                                    
+                    select = Select(browser.find_element(By.XPATH, ("/html/body/div/div[2]/div[3]/div[1]/div[2]/div/label/select")))
 
-                select.select_by_value('100')
+                    select.select_by_value('100')
+                    
+                except:
+                    
+                    sleep(5)
+                    
+                    WebDriverWait(browser, 20).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div/div[2]/div[3]/div[1]/div[2]/div/label/select")))
+                    
+                    select = Select(browser.find_element(By.XPATH, ("/html/body/div/div[2]/div[3]/div[1]/div[2]/div/label/select")))
+
+                    select.select_by_value('100')
                 
                 sleep(1)
                 
@@ -267,17 +308,23 @@ class getList:
                     
                     if o == 2:
                         
+                        WebDriverWait(browser, 20).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div/div[2]/div[3]/div[4]/div/div/ul/li[{0}]/a".format(o+3))))
+                        
                         button = browser.find_element(By.XPATH, ("/html/body/div/div[2]/div[3]/div[4]/div/div/ul/li[{0}]/a".format(o+3)))
                         
                         browser.execute_script('arguments[0].click()', button)
                         
                     if o == 1:
                         
+                        WebDriverWait(browser, 20).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div/div[2]/div[3]/div[4]/div/div/ul/li[{0}]/a".format(o+3))))
+                        
                         button = browser.find_element(By.XPATH, ("/html/body/div/div[2]/div[3]/div[4]/div/div/ul/li[{0}]/a".format(o+3)))
                         
                         browser.execute_script('arguments[0].click()', button)
                         
                     try:
+                        
+                        WebDriverWait(browser, 20).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div/div[2]/div[3]/div[3]/div/table/tbody/tr[{0}]/td[7]/a".format(m%100+1))))
                 
                         button = browser.find_element(By.XPATH, ("/html/body/div/div[2]/div[3]/div[3]/div/table/tbody/tr[{0}]/td[7]/a".format(m%100+1)))
                     
@@ -347,6 +394,8 @@ class getList:
                 
                 browser.back()
                 
+            WebDriverWait(browser, 20).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div/div[2]/div[1]/div[4]/div/div/ul/li[9]/a")))
+                
             button = browser.find_element(By.XPATH, ("/html/body/div/div[2]/div[1]/div[4]/div/div/ul/li[9]/a"))
                 
             browser.execute_script('arguments[0].click()', button)
@@ -393,17 +442,33 @@ class getList:
                         
                     matchsehirler = re.search(sehir[z].translate(translationTable), konum.lower().translate(translationTable))
                     
+                    matchizmir = re.search("izmir", konum.lower().translate(translationTable))
+                    
+                    matchIZMIR = re.search("IZMIR", konum.upper().translate(translationTable))
+                    
                     if matchsehirler:
                         
                         konum = sehirler[z]
+                        
+                    elif matchizmir or matchIZMIR:
+                        
+                        konum = "İzmir"
                         
                     else:
                         
                         matchsehirler = re.search(sehir[z].upper().translate(translationTable), konum.upper().translate(translationTable))
                         
+                        matchizmir = re.search("İZMİR", konum.upper().translate(translationTable))
+                        
+                        matchIZMIR = re.search("IZMIR", konum.upper().translate(translationTable))
+                        
                         if matchsehirler:
                         
                             konum = sehirler[z]
+                            
+                        elif matchizmir or matchIZMIR:
+                        
+                            konum = "İzmir"
                         
                     table_df.iloc[(i+s+p-1)+100*j]["Konum"] = konum
                         
@@ -417,10 +482,14 @@ class getList:
                     
                     table_df.iloc[(i+s+p-1)+100*j]["Yerli mi?"] = "Hayır"
                     
+            WebDriverWait(browser, 20).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div/div[2]/div[1]/div[3]/div/table/tbody/tr[{0}]/td[8]/a".format(p))))
+                    
             button = browser.find_element(By.XPATH, "/html/body/div/div[2]/div[1]/div[3]/div/table/tbody/tr[{0}]/td[8]/a".format(p))
             
             browser.execute_script('arguments[0].click()', button)
 
+            WebDriverWait(browser, 20).until(EC.presence_of_element_located((By.XPATH, ("/html/body/div/div[2]/div[2]/table"))))
+                
             ayrinti = pd.read_html(browser.find_element(By.XPATH, ("/html/body/div/div[2]/div[2]/table")).get_attribute('outerHTML'))[0]
 
             ayrinti_df = ayrinti.transpose()
@@ -466,10 +535,24 @@ class getList:
                 except:
                     
                     pass
+                
+            try:
+                
+                WebDriverWait(browser, 20).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div/div[2]/div[3]/div[1]/div[2]/div/label/select")))
                                     
-            select = Select(browser.find_element(By.XPATH, ("/html/body/div/div[2]/div[3]/div[1]/div[2]/div/label/select")))
+                select = Select(browser.find_element(By.XPATH, ("/html/body/div/div[2]/div[3]/div[1]/div[2]/div/label/select")))
 
-            select.select_by_value('100')
+                select.select_by_value('100')
+                
+            except:
+                
+                sleep(5)
+                
+                WebDriverWait(browser, 20).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div/div[2]/div[3]/div[1]/div[2]/div/label/select")))
+                
+                select = Select(browser.find_element(By.XPATH, ("/html/body/div/div[2]/div[3]/div[1]/div[2]/div/label/select")))
+
+                select.select_by_value('100')
             
             sleep(1)
                 
@@ -514,6 +597,8 @@ class getList:
             for m in range(a):
                 
                 if o == 2:
+                    
+                    WebDriverWait(browser, 20).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div/div[2]/div[3]/div[4]/div/div/ul/li[{0}]/a".format(o+3))))
                         
                     button = browser.find_element(By.XPATH, ("/html/body/div/div[2]/div[3]/div[4]/div/div/ul/li[{0}]/a".format(o+3)))
                     
@@ -521,11 +606,15 @@ class getList:
                     
                 if o == 1:
                     
+                    WebDriverWait(browser, 20).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div/div[2]/div[3]/div[4]/div/div/ul/li[{0}]/a".format(o+3))))
+                    
                     button = browser.find_element(By.XPATH, ("/html/body/div/div[2]/div[3]/div[4]/div/div/ul/li[{0}]/a".format(o+3)))
                     
                     browser.execute_script('arguments[0].click()', button)
                 
                 try:
+                    
+                    WebDriverWait(browser, 20).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div/div[2]/div[3]/div[3]/div/table/tbody/tr[{0}]/td[7]/a".format(m%100+1))))
                 
                     button = browser.find_element(By.XPATH, ("/html/body/div/div[2]/div[3]/div[3]/div/table/tbody/tr[{0}]/td[7]/a".format(m%100+1)))
                 
