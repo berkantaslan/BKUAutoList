@@ -85,7 +85,7 @@ class getList:
 
         sleep(3)
         
-        WebDriverWait(browser, 20).until(EC.element_to_be_clickable((By.XPATH, "//*[@id='tablo_length']/label/select")))
+        WebDriverWait(browser, 20).until(EC.visibility_of_all_elements_located((By.XPATH, "//*[@id='tablo_length']/label/select")))
         
         select = Select(browser.find_element(By.XPATH, ("//*[@id='tablo_length']/label/select")))
 
@@ -191,14 +191,18 @@ class getList:
                         
                     else:
                         table_df.iloc[(i+s-1)+100*j]["Yerli mi?"] = "Hayır"
+                    
+                errors = ["NoSuchElementException", "ElementNotInteractableException"]
                 
-                WebDriverWait(browser, 20).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div/div[2]/div[1]/div[3]/div/table/tbody/tr[{0}]/td[8]/a".format(i))))
+                WebDriverWait(browser, timeout = 20000, poll_frequency=.2, ignored_exceptions=errors).until(EC.visibility_of_all_elements_located((By.XPATH, "/html/body/div/div[2]/div[1]/div[3]/div/table/tbody/tr[{0}]/td[8]/a".format(i))))
                 
                 button = browser.find_element(By.XPATH, "/html/body/div/div[2]/div[1]/div[3]/div/table/tbody/tr[{0}]/td[8]/a".format(i))
-                
+    
                 browser.execute_script('arguments[0].click()', button)
-                    
-                WebDriverWait(browser, 20).until(EC.presence_of_element_located((By.XPATH, ("/html/body/div/div[2]/div[2]/table"))))
+                
+                errors = ["NoSuchElementException", "ElementNotInteractableException"]
+                
+                WebDriverWait(browser, timeout = 20000, poll_frequency=.2, ignored_exceptions=errors).until(EC.visibility_of_all_elements_located((By.XPATH, ("/html/body/div/div[2]/div[2]/table"))))
                 
                 ayrinti = pd.read_html(browser.find_element(By.XPATH, ("/html/body/div/div[2]/div[2]/table")).get_attribute('outerHTML'))[0]
                 
@@ -248,7 +252,7 @@ class getList:
                                         
                 try:
                     
-                    WebDriverWait(browser, 20).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div/div[2]/div[3]/div[1]/div[2]/div/label/select")))
+                    WebDriverWait(browser, 20).until(EC.visibility_of_all_elements_located((By.XPATH, "/html/body/div/div[2]/div[3]/div[1]/div[2]/div/label/select")))
                                     
                     select = Select(browser.find_element(By.XPATH, ("/html/body/div/div[2]/div[3]/div[1]/div[2]/div/label/select")))
 
@@ -258,7 +262,7 @@ class getList:
                     
                     sleep(5)
                     
-                    WebDriverWait(browser, 20).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div/div[2]/div[3]/div[1]/div[2]/div/label/select")))
+                    WebDriverWait(browser, 20).until(EC.visibility_of_all_elements_located((By.XPATH, "/html/body/div/div[2]/div[3]/div[1]/div[2]/div/label/select")))
                     
                     select = Select(browser.find_element(By.XPATH, ("/html/body/div/div[2]/div[3]/div[1]/div[2]/div/label/select")))
 
@@ -308,7 +312,7 @@ class getList:
                     
                     if o == 2:
                         
-                        WebDriverWait(browser, 20).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div/div[2]/div[3]/div[4]/div/div/ul/li[{0}]/a".format(o+3))))
+                        WebDriverWait(browser, 20).until(EC.visibility_of_all_elements_located((By.XPATH, "/html/body/div/div[2]/div[3]/div[4]/div/div/ul/li[{0}]/a".format(o+3))))
                         
                         button = browser.find_element(By.XPATH, ("/html/body/div/div[2]/div[3]/div[4]/div/div/ul/li[{0}]/a".format(o+3)))
                         
@@ -316,7 +320,7 @@ class getList:
                         
                     if o == 1:
                         
-                        WebDriverWait(browser, 20).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div/div[2]/div[3]/div[4]/div/div/ul/li[{0}]/a".format(o+3))))
+                        WebDriverWait(browser, 20).until(EC.visibility_of_all_elements_located((By.XPATH, "/html/body/div/div[2]/div[3]/div[4]/div/div/ul/li[{0}]/a".format(o+3))))
                         
                         button = browser.find_element(By.XPATH, ("/html/body/div/div[2]/div[3]/div[4]/div/div/ul/li[{0}]/a".format(o+3)))
                         
@@ -324,7 +328,7 @@ class getList:
                         
                     try:
                         
-                        WebDriverWait(browser, 20).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div/div[2]/div[3]/div[3]/div/table/tbody/tr[{0}]/td[7]/a".format(m%100+1))))
+                        WebDriverWait(browser, 20).until(EC.visibility_of_all_elements_located((By.XPATH, "/html/body/div/div[2]/div[3]/div[3]/div/table/tbody/tr[{0}]/td[7]/a".format(m%100+1))))
                 
                         button = browser.find_element(By.XPATH, ("/html/body/div/div[2]/div[3]/div[3]/div/table/tbody/tr[{0}]/td[7]/a".format(m%100+1)))
                     
@@ -394,7 +398,7 @@ class getList:
                 
                 browser.back()
                 
-            WebDriverWait(browser, 20).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div/div[2]/div[1]/div[4]/div/div/ul/li[9]/a")))
+            WebDriverWait(browser, 20).until(EC.visibility_of_all_elements_located((By.XPATH, "/html/body/div/div[2]/div[1]/div[4]/div/div/ul/li[9]/a")))
                 
             button = browser.find_element(By.XPATH, ("/html/body/div/div[2]/div[1]/div[4]/div/div/ul/li[9]/a"))
                 
@@ -482,13 +486,17 @@ class getList:
                     
                     table_df.iloc[(i+s+p-1)+100*j]["Yerli mi?"] = "Hayır"
                     
-            WebDriverWait(browser, 20).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div/div[2]/div[1]/div[3]/div/table/tbody/tr[{0}]/td[8]/a".format(p))))
-                    
-            button = browser.find_element(By.XPATH, "/html/body/div/div[2]/div[1]/div[3]/div/table/tbody/tr[{0}]/td[8]/a".format(p))
+            errors = ["NoSuchElementException", "ElementNotInteractableException"]
+                
+            WebDriverWait(browser, timeout = 20000, poll_frequency=.2, ignored_exceptions=errors).until(EC.visibility_of_all_elements_located((By.XPATH, "/html/body/div/div[2]/div[1]/div[3]/div/table/tbody/tr[{0}]/td[8]/a".format(i))))
+            
+            button = browser.find_element(By.XPATH, "/html/body/div/div[2]/div[1]/div[3]/div/table/tbody/tr[{0}]/td[8]/a".format(i))
             
             browser.execute_script('arguments[0].click()', button)
 
-            WebDriverWait(browser, 20).until(EC.presence_of_element_located((By.XPATH, ("/html/body/div/div[2]/div[2]/table"))))
+            errors = ["NoSuchElementException", "ElementNotInteractableException"]
+                
+            WebDriverWait(browser, timeout = 20000, poll_frequency=.2, ignored_exceptions=errors).until(EC.visibility_of_all_elements_located((By.XPATH, ("/html/body/div/div[2]/div[2]/table"))))
                 
             ayrinti = pd.read_html(browser.find_element(By.XPATH, ("/html/body/div/div[2]/div[2]/table")).get_attribute('outerHTML'))[0]
 
@@ -538,7 +546,7 @@ class getList:
                 
             try:
                 
-                WebDriverWait(browser, 20).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div/div[2]/div[3]/div[1]/div[2]/div/label/select")))
+                WebDriverWait(browser, 20).until(EC.visibility_of_all_elements_located((By.XPATH, "/html/body/div/div[2]/div[3]/div[1]/div[2]/div/label/select")))
                                     
                 select = Select(browser.find_element(By.XPATH, ("/html/body/div/div[2]/div[3]/div[1]/div[2]/div/label/select")))
 
@@ -548,7 +556,7 @@ class getList:
                 
                 sleep(5)
                 
-                WebDriverWait(browser, 20).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div/div[2]/div[3]/div[1]/div[2]/div/label/select")))
+                WebDriverWait(browser, 20).until(EC.visibility_of_all_elements_located((By.XPATH, "/html/body/div/div[2]/div[3]/div[1]/div[2]/div/label/select")))
                 
                 select = Select(browser.find_element(By.XPATH, ("/html/body/div/div[2]/div[3]/div[1]/div[2]/div/label/select")))
 
@@ -598,7 +606,7 @@ class getList:
                 
                 if o == 2:
                     
-                    WebDriverWait(browser, 20).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div/div[2]/div[3]/div[4]/div/div/ul/li[{0}]/a".format(o+3))))
+                    WebDriverWait(browser, 20).until(EC.visibility_of_all_elements_located((By.XPATH, "/html/body/div/div[2]/div[3]/div[4]/div/div/ul/li[{0}]/a".format(o+3))))
                         
                     button = browser.find_element(By.XPATH, ("/html/body/div/div[2]/div[3]/div[4]/div/div/ul/li[{0}]/a".format(o+3)))
                     
@@ -606,7 +614,7 @@ class getList:
                     
                 if o == 1:
                     
-                    WebDriverWait(browser, 20).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div/div[2]/div[3]/div[4]/div/div/ul/li[{0}]/a".format(o+3))))
+                    WebDriverWait(browser, 20).until(EC.visibility_of_all_elements_located((By.XPATH, "/html/body/div/div[2]/div[3]/div[4]/div/div/ul/li[{0}]/a".format(o+3))))
                     
                     button = browser.find_element(By.XPATH, ("/html/body/div/div[2]/div[3]/div[4]/div/div/ul/li[{0}]/a".format(o+3)))
                     
@@ -614,7 +622,7 @@ class getList:
                 
                 try:
                     
-                    WebDriverWait(browser, 20).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div/div[2]/div[3]/div[3]/div/table/tbody/tr[{0}]/td[7]/a".format(m%100+1))))
+                    WebDriverWait(browser, 20).until(EC.visibility_of_all_elements_located((By.XPATH, "/html/body/div/div[2]/div[3]/div[3]/div/table/tbody/tr[{0}]/td[7]/a".format(m%100+1))))
                 
                     button = browser.find_element(By.XPATH, ("/html/body/div/div[2]/div[3]/div[3]/div/table/tbody/tr[{0}]/td[7]/a".format(m%100+1)))
                 
